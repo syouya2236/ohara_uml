@@ -1,0 +1,12 @@
+@startuml ユースケース図
+left to right direction
+
+actor ユーザー
+
+rectangle "RoboDogシステム" {
+  ユーザー -- (名前を変更できる)
+  ユーザー -- (時刻に応じた挨拶ができる)
+  ユーザー -- (2つの整数の足し算ができる)
+}
+
+@enduml
