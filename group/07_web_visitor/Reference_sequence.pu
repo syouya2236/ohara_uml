@@ -1,0 +1,36 @@
+@startuml
+
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor  #F8CECC
+skinparam entityBackgroundColor   #DAE8FC
+' ロバストネス図の要素をシーケンス図に変換
+actor ユーザー
+
+boundary "訪問者システムメニュー" as Menu
+control "訪問者一覧表示" as ListControl
+entity "訪問者" as Visitor
+boundary "訪問者一覧画面" as ListView
+
+' シーケンスの実行
+activate ユーザー
+ユーザー -> Menu: 訪問者一覧をクリック()
+activate Menu
+
+Menu -> ListControl: 訪問者一覧表示を要求()
+activate ListControl
+
+ListControl -> Visitor: 訪問者情報を取得()
+activate Visitor
+Visitor --> ListControl: 訪問者情報のリストを返す()
+deactivate Visitor
+
+ListControl -> ListView: 訪問者情報のリストを渡す()
+activate ListView
+
+ListView --> Menu: 画面表示完了()
+deactivate ListView
+deactivate ListControl
+deactivate Menu
+
+@enduml

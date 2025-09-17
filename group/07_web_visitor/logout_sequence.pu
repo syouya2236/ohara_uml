@@ -1,0 +1,30 @@
+@startuml
+
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor  #F8CECC
+skinparam entityBackgroundColor   #DAE8FC
+
+' Actors
+actor ユーザー
+
+' Lifelines
+boundary "訪問者システム\n:メニュー" as Menu
+control "ログアウト処理" as LogoutProcess
+entity "訪問者" as Visitor
+boundary "ログイン画面" as LoginScreen
+
+' Sequence of actions
+activate ユーザー
+ユーザー -> Menu: 1:ユーザログアウトをクリック()
+activate Menu
+Menu -> LogoutProcess: 1.1:起動()
+activate LogoutProcess
+LogoutProcess -> Visitor: 1.1.1:ログアウト要求()
+activate Visitor
+Visitor --> LogoutProcess: 
+deactivate Visitor
+LogoutProcess -> LoginScreen: 1.1.2:表示()
+activate LoginScreen
+
+@enduml
