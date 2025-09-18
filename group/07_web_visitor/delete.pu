@@ -1,0 +1,29 @@
+@startuml
+skinparam style strictuml
+left to right direction
+
+' オブジェクトの定義
+object "ユーザー" as user
+object "アカウント削除画面" as UI <<Boundary>>
+object "アカウント削除コントローラ" as Controller <<Control>>
+object "ユーザー情報" as UserEntity <<Entity>>
+object "投稿" as Post <<Entity>>
+object "写真" as Photo <<Entity>>
+object "セッション" as Session <<Entity>>
+
+' ユーザーとUIのやり取り
+user --> UI : 「アカウントを削除する」をクリック
+
+' UIとコントローラのやり取り
+UI --> Controller : 削除リクエスト
+
+' コントローラと実体のやり取り
+Controller --> UserEntity : データを削除する
+Controller --> Post : 関連投稿を削除する
+Controller --> Photo : 関連写真を削除する
+Controller --> Session : セッションを無効化する
+
+' コントローラからUIへのフィードバック
+Controller --> UI : 完了メッセージを返す
+
+@enduml
