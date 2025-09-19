@@ -1,0 +1,69 @@
+@startuml
+' アクターとオブジェクトの定義
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor  #F8CECC
+skinparam entityBackgroundColor   #DAE8FC
+
+
+actor 職員 as staff
+boundary "予約受付画面" as ReservationScreen
+control "予約受付制御" as ReservationControl
+entity "利用者情報" as User
+entity "資料情報" as Item
+entity "予約情報" as Reservation
+
+' 1. 職員は、利用者から「予約カード」と「学生証/職員証」を受け取る。
+staff -> ReservationScreen: 予約手続きの依頼
+
+' 2. 職員は、システムの「予約受付画面」を開く。
+staff -> ReservationScreen: 画面を開く
+
+' 3. システムは、予約受付画面を表示する。
+ReservationScreen -> staff: 画面を表示
+
+' 4. 職員は、利用者の会員番号と予約したい書名を入力する。
+staff -> ReservationScreen: 会員番号と書名を入力
+
+' 5. システムは、入力内容をもとに貸出中の対象図書を検索し、該当する資料を一覧表示する。
+ReservationScreen -> ReservationControl: 検索と表示 (会員番号, 書名)
+ReservationControl -> User: 利用者を探す (会員番号)
+
+alt 5A. 利用者が会員未登録の場合
+    User --> ReservationControl: 会員情報なし
+    ReservationControl -> ReservationScreen: "会員が登録されていません"と表示
+    ReservationScreen -> staff: メッセージを表示、処理を中断
+end
+
+alt 5B. 入力内容に誤りがある場合
+    User --> ReservationControl: エラーを返す
+    ReservationControl -> ReservationScreen: エラーメッセージを表示
+    ReservationScreen -> staff: メッセージを表示、再入力を促す
+end
+
+User --> ReservationControl: 会員情報を返す
+ReservationControl -> Item: 書名で探す (書名)
+Item --> ReservationControl: 該当資料の一覧を返す
+ReservationControl --> ReservationScreen: 資料リストを表示
+ReservationScreen --> staff: 資料リストを表示
+
+' 6. 職員は、対象の資料を選択し「予約登録」を実行する。
+staff -> ReservationScreen: 資料を選択し、予約登録
+
+alt 5C. 指定した資料が既に全て予約で埋まっている場合
+    ReservationScreen -> ReservationControl: 予約の空き状況を確認 (資料ID)
+    ReservationControl -> Reservation: 予約数を数える (資料ID)
+    Reservation --> ReservationControl: 予約数を返す
+    ReservationControl -> ReservationScreen: "予約できません"と表示
+    ReservationScreen -> staff: メッセージを表示、別資料を促す
+end
+
+' 7. システムは、予約を登録し、予約番号と予約完了メッセージを表示する。
+ReservationScreen -> ReservationControl: 予約を作成 (会員番号, 資料ID)
+ReservationControl -> Reservation: 記録を保存 (会員番号, 資料ID)
+Reservation --> ReservationControl: 予約番号を返す
+ReservationControl --> ReservationScreen: 予約完了メッセージを返す
+ReservationScreen --> staff: 予約番号とメッセージを表示
+
+
+@enduml

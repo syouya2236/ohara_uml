@@ -1,0 +1,53 @@
+@startuml
+' オブジェクトの定義
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor  #F8CECC
+skinparam entityBackgroundColor   #DAE8FC
+
+actor 職員 as staff
+boundary "返却画面" as ReturnScreen
+control "返却制御" as ReturnControl
+entity "貸出記録" as LoanRecord
+entity "資料" as Item
+entity "予約記録" as Reservation
+entity "利用者" as User
+boundary "メールサーバー" as MailServer
+
+' 1. 職員は、利用者から返却する本を受け取る。
+staff -> ReturnScreen: 本の受け取り
+
+' 2. 職員は、本のバーコードをスキャンする。
+staff -> ReturnScreen: バーコードをスキャン
+
+' 3. システムは、バーコードを読み取り、対応する貸出記録を検索する。
+ReturnScreen -> ReturnControl: processReturn(barcode)
+ReturnControl -> LoanRecord: findByBarcode(barcode)
+LoanRecord --> ReturnControl: 貸出記録を返す
+
+' 4. 代替フロー: 予約された本の場合
+alt 予約された本の場合
+    ReturnControl -> Reservation: findByItem(item_id)
+    Reservation --> ReturnControl: 予約記録を返す
+    ReturnControl -> Item: setStatus("予約済み")
+    ReturnControl -> User: getEmail(user_id)
+    User --> ReturnControl: 予約者のメールアドレスを返す
+    ReturnControl -> MailServer: sendEmail(to_address, subject, body)
+end
+
+' 4. 代替フロー: 破損した場合
+alt 資料が破損した場合
+    staff -> ReturnScreen: 破損を報告
+    ReturnScreen -> ReturnControl: handleDamage(item_id)
+    ReturnControl -> Item: setStatus("破損")
+end
+
+' 4. 基本フロー: 貸出記録を更新し、ステータスを変更
+ReturnControl -> LoanRecord: delete()
+ReturnControl -> Item: setStatus("利用可能")
+
+' 5. 返却処理が正常に完了したことを出力
+ReturnControl -> ReturnScreen: notifyCompletion()
+ReturnScreen --> staff: 完了メッセージを表示
+
+@enduml
