@@ -45,4 +45,6 @@ def get_my_greeting() -> str:
     except (json.JSONDecodeError, OSError):
         return ""
 
-#def set_first_value() -> int:
+# set_first_value: first_valueをjsonに保存
+# set_second_value: second_valueをjsonに保存
+# get_addition: jsonから値を取ってきて、足し算した結果を返却
