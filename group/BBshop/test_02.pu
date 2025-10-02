@@ -1,0 +1,75 @@
+@startuml Robustness Diagram - Order Flow Optimized
+
+' 要素の定義
+actor "顧客" as User
+
+' バウンダリ要素
+boundary "注文画面" as B_Order
+boundary "注文確認画面" as B_Confirm
+boundary "在庫不足通知" as B_Stock_Error
+boundary "支払情報入力画面" as B_Pay_Input
+boundary "決済失敗通知/選択画面" as B_Pay_Fail
+
+' コントロール要素を一つに集約し、関連する操作を記述
+control "注文処理コントローラ" as C_Order_Main <<Control>>
+
+' エンティティ要素
+entity "カート" as E_Cart
+entity "商品在庫" as E_Stock
+entity "支払情報" as E_Payment
+entity "注文" as E_Order
+
+'======================================================
+' 基本フロー (Primary Flow)
+'======================================================
+
+' ①注文開始
+User -> B_Order : 注文ボタンをクリック
+B_Order -> C_Order_Main : 注文依頼
+
+' ②在庫確認
+C_Order_Main --> E_Stock : 在庫を参照
+C_Order_Main --> E_Cart : 商品を参照
+' (在庫OKの場合、そのまま処理を続行)
+
+' ③支払情報確認
+C_Order_Main --> E_Payment : 情報を検証
+
+' ④決済処理
+' (決済成功の場合、そのまま処理を続行)
+
+' ⑤, ⑥注文確定と削除
+C_Order_Main --> E_Order : 注文を生成/番号発行
+C_Order_Main --> E_Cart : 注文商品を削除
+
+' ⑦完了
+C_Order_Main -> B_Confirm : 注文確認を表示
+B_Confirm -> User : 確認メール送信/画面表示
+
+'======================================================
+' 代替フロー (Alternative Flows) - 戻り線を明確化
+'======================================================
+
+' 代替フローA (在庫不足)
+' C_Order_Main の処理中に発生
+C_Order_Main -[hidden]down-> B_Stock_Error
+C_Order_Main -l-> B_Stock_Error : (在庫不足)
+B_Stock_Error -> User : 通知
+
+' 代替フローB (支払情報無効)
+' C_Order_Main の処理中に発生。戻り線がフローを迂回するように記述
+C_Order_Main -[hidden]down-> B_Pay_Input
+C_Order_Main -r-> B_Pay_Input : (情報無効)
+B_Pay_Input -> User : エラーを通知/再入力を促す
+User -> B_Pay_Input : 正しい情報を入力
+B_Pay_Input -[dashed]l-> C_Order_Main : (基本フロー③に戻る)
+
+' 代替フローC (決済失敗)
+' C_Order_Main の処理中に発生。戻り線がフローを迂回するように記述
+C_Order_Main -[hidden]down-> B_Pay_Fail
+C_Order_Main -r-> B_Pay_Fail : (決済失敗)
+B_Pay_Fail -> User : 通知/方法を選択
+User -> B_Pay_Fail : 支払い方法変更
+B_Pay_Fail -[dashed]l-> C_Order_Main : (基本フロー③に戻る)
+
+@enduml
