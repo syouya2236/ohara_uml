@@ -1,0 +1,98 @@
+@startuml OnlineShopping-AddToCartSequenceDiagram
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor  #F8CECC
+skinparam entityBackgroundColor   #DAE8FC
+
+actor 顧客
+boundary ProductDetailScreen
+control AddToCartProcessor
+control InventoryCheck
+entity ItemInventoryDB
+control ErrorHandler
+control CartUpdater
+entity CartDB
+boundary CartScreen
+
+顧客 -> ProductDetailScreen: "カートに追加をクリック
+activate ProductDetailScreen
+
+ProductDetailScreen -> AddToCartProcessor: SendRequest()
+activate AddToCartProcessor
+
+AddToCartProcessor -> InventoryCheck: CheckInventory()
+activate InventoryCheck
+InventoryCheck -> ItemInventoryDB: InventoryReference()
+activate ItemInventoryDB
+ItemInventoryDB --> InventoryCheck: StockQuantity
+deactivate ItemInventoryDB
+
+alt 代替フローA：在庫なし
+    InventoryCheck -> ErrorHandler: DetectOutOfStock()
+    deactivate InventoryCheck
+    activate ErrorHandler
+    ErrorHandler --> ProductDetailScreen: "在庫がありません" 表示
+    deactivate ErrorHandler
+    deactivate AddToCartProcessor
+    deactivate ProductDetailScreen
+    
+else Communication/System Failure (代替フローC：通信・障害)
+    InventoryCheck -> ErrorHandler: DetectFailure()
+    deactivate InventoryCheck
+    activate ErrorHandler
+    ErrorHandler --> ProductDetailScreen: "処理に失敗しました。時間をおいて再度お試しください" 表示
+    deactivate ErrorHandler
+    deactivate AddToCartProcessor
+    deactivate ProductDetailScreen
+    
+else Stock Available (基本フロー)
+    InventoryCheck --> AddToCartProcessor: Stock Available
+    deactivate InventoryCheck
+
+    AddToCartProcessor -> CartUpdater: CartDecision(CheckExistingItem)
+    activate CartUpdater
+    CartUpdater -> CartDB: CartReference/Update(CustomerID, ItemID)
+    activate CartDB
+    CartDB --> CartUpdater: Cart Info
+    deactivate CartDB
+
+    CartUpdater -> ItemInventoryDB: DecreaseInventory(Quantity)
+    activate ItemInventoryDB
+
+    alt Inventory Competition Failure (代替フローB：在庫争奪)
+        ItemInventoryDB --X CartUpdater: Decrease Failed (Lock/Conflict)
+        deactivate ItemInventoryDB
+        CartUpdater -> ErrorHandler: DetectConflict/Rollback()
+        deactivate CartUpdater
+        activate ErrorHandler
+        ErrorHandler --> ProductDetailScreen: "申し訳ありません。只今の操作中に在庫が無くなりました。" 表示
+        deactivate ErrorHandler
+        deactivate AddToCartProcessor
+        deactivate ProductDetailScreen
+        
+    else Decrease Successful (基本フロー ⑤, ⑥)
+        ItemInventoryDB --> CartUpdater: Decrease Success
+        deactivate ItemInventoryDB
+        
+        note right of CartUpdater
+          在庫減算とカートDB更新は
+          同一トランザクションで実施
+        end note
+        
+        CartUpdater -> CartDB: Add Quantity/New Row (Commit)
+        activate CartDB
+        CartDB --> CartUpdater: Update Result
+        deactivate CartDB
+        
+        CartUpdater -> CartScreen: Display Latest Cart(情報更新・再計算)
+        deactivate CartUpdater
+        deactivate AddToCartProcessor
+        deactivate ProductDetailScreen
+        activate CartScreen
+        
+        CartScreen --> 顧客: "カートに追加しました" メッセージ表示
+        deactivate CartScreen
+    end
+end
+
+@enduml
