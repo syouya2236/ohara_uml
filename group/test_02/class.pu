@@ -1,0 +1,8 @@
+@startuml ECommerceOrderSystem
+hide circle
+hide empty members
+skinparam classAttributeIconSize 0
+
+class 
+
+@enduml

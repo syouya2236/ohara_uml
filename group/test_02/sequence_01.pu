@@ -1,0 +1,126 @@
+@startuml 
+
+hide footbox
+skinparam boundaryBackgroundColor #D5E8D4
+skinparam controlBackgroundColor #F8CECC
+skinparam entityBackgroundColor #DAE8FC
+
+actor 事務職員
+boundary メニュー画面
+boundary 図書予約画面
+control 予約開始処理
+control 図書検索
+control 会員確認
+control 入力チェック
+control 予約登録
+control エラー処理
+entity 会員
+entity 図書
+entity 予約
+
+事務職員 -> メニュー画面: 1. 予約メニュー押下
+activate 事務職員
+activate メニュー画面
+
+メニュー画面 -> 予約開始処理: 要求送信
+deactivate メニュー画面
+activate 予約開始処理
+
+予約開始処理 -> 図書予約画面: 2. 図書予約画面表示
+deactivate 予約開始処理
+activate 図書予約画面
+
+loop 会員番号入力/確認
+    事務職員 -> 図書予約画面: 3. 会員番号入力
+    図書予約画面 -> 会員確認: 会員番号入力
+    activate 会員確認
+    
+    alt 代替フロー①: 会員番号未入力/未登録
+        会員確認 -> エラー処理: 障害検知 (会員番号未入力/未登録)
+        deactivate 会員確認
+        activate エラー処理
+        エラー処理 -> 図書予約画面: 「会員番号を確認してください」
+        deactivate エラー処理
+        図書予約画面 -> 事務職員: メッセージ表示 (入力再開)
+    else 正常: 会員情報表示
+        会員確認 -> 会員: 会員情報取得 (氏名、種別)
+        activate 会員
+        会員 -> 会員確認: 氏名、種別
+        deactivate 会員
+        会員確認 -> 図書予約画面: 4. 会員氏名、会員種別表示
+        deactivate 会員確認
+        break
+    end
+end
+
+loop 図書検索/選択
+    事務職員 -> 図書予約画面: 5. 書名入力/検索押下
+    図書予約画面 -> 図書検索: 書名検索
+    activate 図書検索
+
+    alt 代替フロー②: 書名未入力
+        図書検索 -> エラー処理: 障害検知 (書名未入力)
+        deactivate 図書検索
+        activate エラー処理
+        エラー処理 -> 図書予約画面: 「書名を入力してください」
+        deactivate エラー処理
+        図書予約画面 -> 事務職員: メッセージ表示 (入力再開)
+    else 書名入力あり
+        図書検索 -> 図書: 6. 図書一覧検索 (書名)
+        activate 図書
+        alt 代替フロー③: 該当図書なし
+            図書 -> 図書検索: 該当図書なし
+            deactivate 図書
+            図書検索 -> エラー処理: 障害検知 (該当図書なし)
+            deactivate 図書検索
+            activate エラー処理
+            エラー処理 -> 図書予約画面: 「該当する図書が見つかりません」
+            deactivate エラー処理
+            図書予約画面 -> 事務職員: メッセージ表示 (入力再開)
+        else 正常: 図書一覧表示
+            図書 -> 図書検索: 図書一覧 (書名、著者、出版社)
+            deactivate 図書
+            図書検索 -> 図書予約画面: 6. 図書一覧表示
+            deactivate 図書検索
+            break
+        end
+    end
+end
+
+事務職員 -> 図書予約画面: 7. 予約する図書の選択
+図書予約画面 -> 入力チェック: 予約可否チェック
+activate 入力チェック
+
+alt 代替フロー④: 学生が雑誌を予約
+    入力チェック -> エラー処理: 障害検知 (学生、雑誌予約不可)
+    deactivate 入力チェック
+    activate エラー処理
+    エラー処理 -> 図書予約画面: 「学生は雑誌を予約できません」
+    deactivate エラー処理
+    図書予約画面 -> 事務職員: メッセージ表示 (基本フロー⑤へ戻る)
+    
+else 代替フロー⑤: 未貸し出しの本がある
+    入力チェック -> エラー処理: 障害検知 (在庫あり)
+    deactivate 入力チェック
+    activate エラー処理
+    エラー処理 -> 図書予約画面: 「在庫があります」
+    deactivate エラー処理
+    図書予約画面 -> 事務職員: メッセージ表示 (基本フロー⑤へ戻る)
+
+else 正常: 予約登録
+    入力チェック -> 予約登録: 予約情報(ISBN、会員番号、予約日時)
+    deactivate 入力チェック
+    activate 予約登録
+    予約登録 -> 予約: 8. 予約情報保存
+    activate 予約
+    予約 -> 予約登録: 保存完了
+    deactivate 予約
+    予約登録 -> 図書予約画面: 予約完了表示
+    deactivate 予約登録
+    図書予約画面 -> 事務職員: 8. 予約完了画面表示
+    
+end
+deactivate 図書予約画面
+deactivate 事務職員
+
+@enduml 

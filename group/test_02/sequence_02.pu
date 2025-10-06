@@ -1,0 +1,96 @@
+@startuml 
+hide footbox
+
+actor 事務職員
+participant システム as System
+control 返却情報処理 as Control
+entity 図書DB as D_Book
+entity 予約DB as D_Reserve
+
+事務職員 -> System: 1. 返却メニュー押下
+activate 事務職員
+activate System
+System -> System: 返却開始処理 (内部遷移)
+System --> 事務職員: 2. 返却一覧画面表示
+
+loop 図書の管理番号入力と確認 (③と④の繰り返し)
+    事務職員 -> System: 3. 返却図書管理番号入力
+    activate System
+    System -> Control: 管理番号を渡す
+    activate Control
+    
+    Control -> D_Book: 4. 図書情報検索 (管理番号)
+    activate D_Book
+    D_Book --> Control: 図書情報 (貸出状況, 期限日)
+    deactivate D_Book
+
+    alt 代替フロー①: 管理番号が未登録
+        Control -> System: 障害検知 (管理番号なし)
+        deactivate Control
+        System -> 事務職員: ①-1. 「管理番号を確認してください。」メッセージ表示
+        System --> 事務職員: (一覧に追加しない)
+        deactivate System
+        
+    else 代替フロー③: 貸し出し中でない
+        Control -> System: 障害検知 (貸し出し中でない)
+        deactivate Control
+        System -> 事務職員: ③-1. 「この図書は貸し出されていません。」メッセージ表示
+        System --> 事務職員: (一覧に追加しない)
+        deactivate System
+        
+    else 代替フロー②: 返却期限超過
+        Control -> System: 期限超過の情報
+        deactivate Control
+        System -> 事務職員: ②-1. 「返却期限は過ぎています。注意してください。」メッセージ表示
+        System --> 事務職員: 図書情報を**赤字**で一覧に追加
+        deactivate System
+        
+    else 正常 (期限内、貸出中)
+        Control -> System: 正常な図書情報
+        deactivate Control
+        System --> 事務職員: 図書情報を一覧に追加
+        deactivate System
+    end
+end
+
+事務職員 -> System: 5. 返却ボタン押下
+activate System
+
+alt 代替フロー④: 図書が一冊も入力されていない
+    System -> 事務職員: ④-1. 「返却する図書が入力されていません。」メッセージ表示
+    deactivate System
+    事務職員 -> System: (基本フロー③へ復帰)
+    
+else 返却処理実行
+    System -> Control: 返却図書リスト
+    activate Control
+    
+    Control -> D_Book: 6. 図書DBの更新 (返却ステータス)
+    activate D_Book
+    D_Book --> Control: 更新完了
+    deactivate D_Book
+
+    Control -> D_Reserve: 予約チェック (予約情報検索)
+    activate D_Reserve
+    D_Reserve --> Control: 予約状況
+    deactivate D_Reserve
+
+    alt 代替フロー⑤: 図書が予約されている
+        Control -> System: ⑤-1. 予約者情報
+        Control -> D_Reserve: 予約者へメール送信要求 (最も古い予約者)
+        
+        System -> 事務職員: ⑤-2. 「この図書は予約されています。予約カウンターへ除けてください。」メッセージ表示
+        System --> 事務職員: 図書情報を**青字**で一覧に追加 (返却完了画面の一部)
+        
+    else 予約なし (正常)
+        Control -> System: 返却完了
+        System --> 事務職員: 6. 返却完了画面表示
+    end
+    deactivate Control
+end
+
+System -> System: 返却完了通知 (内部処理)
+deactivate System
+deactivate 事務職員
+
+@enduml
